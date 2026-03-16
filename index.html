@@ -67,7 +67,7 @@
     <input type="date" id="fecha-asis">
     <input type="text" id="tema" placeholder="Tema de la enseñanza">
     <div id="listaAsis"></div>
-    <button class="btn-save" id="btn-finalizar-asis">Finalizar y Guardar</button>
+    <button class="btn-save" onclick="window.finalizarAsistencia()">Finalizar y Guardar</button>
 </div>
 
 <div class="container" id="lista" style="display:none;">
@@ -123,18 +123,15 @@
     let fotoBase64 = "";
     let chart1 = null, chart2 = null;
 
-    // --- SYNC ---
     onValue(ref(db, 'jovenes'), (snap) => { JOVENES = snap.val() ? Object.values(snap.val()) : []; });
     onValue(ref(db, 'temas'), (snap) => { TEMAS = snap.val() ? Object.values(snap.val()) : []; });
 
-    // --- NAV ---
     window.nav = (id) => {
         ['home','registro','asistencia','lista','temas','stats'].forEach(v => document.getElementById(v).style.display='none');
         document.getElementById(id).style.display='block';
-        if(id === 'stats') generarReportes();
+        if(id === 'stats') window.generarReportes();
     };
 
-    // --- FOTOS ---
     window.previsualizarFoto = (input) => {
         if (input.files && input.files[0]) {
             let reader = new FileReader();
@@ -147,7 +144,6 @@
         }
     };
 
-    // --- CRUD ---
     document.getElementById('btn-guardar-real').onclick = async () => {
         const nom = document.getElementById('nom').value.trim();
         if(!nom) return alert("Nombre Requerido");
@@ -169,7 +165,6 @@
         limpiarForm();
     };
 
-    // --- ASISTENCIA ---
     window.mostrarAsistencia = () => {
         document.getElementById('fecha-asis').value = new Date().toISOString().split('T')[0];
         const cont = document.getElementById('listaAsis'); cont.innerHTML = "";
@@ -184,24 +179,29 @@
         nav('asistencia');
     };
 
-    document.getElementById('btn-finalizar-asis').onclick = async () => {
+    // CORRECCIÓN AQUÍ: Función expuesta a window para que el botón la encuentre
+    window.finalizarAsistencia = async () => {
         const sel = Array.from(document.querySelectorAll('.asistencia-row.selected')).map(el => el.dataset.id);
         const fecha = document.getElementById('fecha-asis').value;
         const tema = document.getElementById('tema').value.trim();
-        if(!fecha) return alert("Falta fecha");
-        for(let j of JOVENES) {
-            let h = Array.isArray(j.historialAsis) ? [...j.historialAsis] : [];
-            h.push(sel.includes(j.id));
-            if(h.length > 15) h.shift();
-            await set(ref(db, `jovenes/${j.id}/historialAsis`), h);
+        if(!fecha) return alert("Por favor, selecciona la fecha.");
+        
+        try {
+            for(let j of JOVENES) {
+                let h = Array.isArray(j.historialAsis) ? [...j.historialAsis] : [];
+                h.push(sel.includes(j.id));
+                if(h.length > 15) h.shift();
+                await set(ref(db, `jovenes/${j.id}/historialAsis`), h);
+            }
+            if(tema) await set(ref(db, 'temas/' + fecha.replace(/-/g,'')), { fecha, tema, cantidad: sel.length });
+            alert("¡Asistencia guardada con éxito!");
+            nav('home');
+        } catch(e) {
+            alert("Error al guardar. Revisa tu conexión.");
         }
-        if(tema) await set(ref(db, 'temas/' + fecha.replace(/-/g,'')), { fecha, tema, cantidad: sel.length });
-        alert("Guardado");
-        nav('home');
     };
 
-    // --- DIRECTORIO ---
-    window.mostrarLista = () => { nav('lista'); filtrarLista(); };
+    window.mostrarLista = () => { nav('lista'); window.filtrarLista(); };
     window.filtrarLista = () => {
         const q = document.getElementById('busqueda').value.toLowerCase();
         const cont = document.getElementById('listaJovenes'); cont.innerHTML = "";
@@ -228,7 +228,6 @@
         nav('registro');
     };
 
-    // --- REPORTES Y GRÁFICAS ---
     window.generarReportes = () => {
         const cU = document.getElementById('reporte-seguimiento');
         const cN = document.getElementById('reporte-nuevos');
@@ -244,20 +243,18 @@
 
         JOVENES.forEach(j => {
             const h = j.historialAsis || [];
-            // Alerta Faltas
             if(h.length >= 3 && h.slice(-3).every(v => v === false)) {
-                const msgU = encodeURIComponent(`¡Hola ${j.nombre}! 👋 Qué alegría saludarte. Te hemos extrañado mucho en las últimas reuniones de Jóvenes CFE. Solo quería pasar por aquí para saber cómo estás y si hay algo en lo que podamos apoyarte o estar orando por ti. ¡Eres parte importante del grupo! Un abrazo. 🤗"`);
+                const msgU = encodeURIComponent(`¡Hola ${j.nombre}! 👋 Qué alegría saludarte. Te hemos extrañado mucho en las últimas reuniones de Jóvenes CFE. Solo quería saber cómo estás y si hay algo en lo que podamos apoyarte. ¡Eres parte de la familia! Un abrazo.`);
                 cU.innerHTML += `<div class="card urgent-card"><strong>${j.nombre}</strong><br><a class="btn-whatsapp" style="width:100%" href="https://wa.me/57${j.telefono}?text=${msgU}" target="_blank">💬 Saludarlos</a></div>`;
             }
-            // Mensaje Mejorado para Nuevos
             const fR = new Date(j.fechaRegistro);
             if(new Date() - fR < 15 * 24 * 60 * 60 * 1000) {
-                const msgN = encodeURIComponent(`¡Hola ${j.nombre}! 👋 Qué gran alegría que nos hayas acompañado en la reunión. ¡Te doy la bienvenida al ministerio de Jóvenes CFE! Estamos aquí para lo que necesites. ✨`);
+                // MENSAJE MEJORADO PARA NUEVOS
+                const msgN = encodeURIComponent(`¡Hola ${j.nombre}! 👋 Qué gran bendición que nos hayas acompañado en la reunión. ¡Bienvenido/a a la familia de Jóvenes CFE! Estamos muy felices de tenerte con nosotros y queremos que sepas que aquí tienes un lugar. ✨`);
                 cN.innerHTML += `<div class="card new-card"><strong>${j.nombre}</strong><br><a class="btn-whatsapp" style="width:100%; background:var(--success)" href="https://wa.me/57${j.telefono}?text=${msgN}" target="_blank">✨ Dar Bienvenida</a></div>`;
             }
         });
 
-        // Gráfica Niveles
         if(chart1) chart1.destroy();
         const nivs = { 'Nuevo': 0, 'En crecimiento': 0, 'Líder': 0 };
         JOVENES.forEach(x => nivs[x.nivel]++);
@@ -267,7 +264,6 @@
             options: { maintainAspectRatio: false }
         });
 
-        // Gráfica Tendencia (NUEVA/REINTEGRADA)
         if(chart2) chart2.destroy();
         const ultimosTemas = [...TEMAS].sort((a,b) => a.fecha.localeCompare(b.fecha)).slice(-5);
         chart2 = new Chart(document.getElementById('chartTendencia'), {
@@ -293,11 +289,14 @@
         JOVENES.forEach(x => csv += `"${x.nombre}","${x.telefono}","${x.nivel}","${x.direccion}"\n`);
         const link = document.createElement("a");
         link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-        link.download = "Directorio.csv"; link.click();
+        link.download = "Directorio_CFE.csv"; link.click();
     };
 
     function limpiarForm() {
-        ['edit-id','nom','tel','dir','ed','obs'].forEach(id => document.getElementById(id).value = "");
+        ['edit-id','nom','tel','dir','ed','obs'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.value = "";
+        });
         document.getElementById('img-prev').style.display='none';
         document.getElementById('btn-eliminar-joven').style.display='none';
         fotoBase64 = "";
