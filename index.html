@@ -3,20 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jóvenes CFE Cloud - Full Pro Edition</title>
+    <title>Jóvenes CFE Cloud - Full</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --warning: #f39c12; --bg: #f4f6f9; --danger: #e74c3c; --purple: #8e44ad; --whatsapp: #25D366; }
         body { font-family: 'Segoe UI', sans-serif; margin:0; background: var(--bg); color: #333; -webkit-tap-highlight-color: transparent; }
         header { background: var(--primary); color:white; padding:20px; text-align:center; font-weight: bold; font-size: 22px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .container { padding:15px; max-width: 500px; margin: auto; }
-        button { width:100%; padding:16px; margin:10px 0; border:none; border-radius:15px; font-size:16px; font-weight:600; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s; }
-        button:active { transform: scale(0.98); }
+        button { width:100%; padding:16px; margin:10px 0; border:none; border-radius:15px; font-size:16px; font-weight:600; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn-main { background: var(--accent); color:white; }
         .btn-save { background: var(--success); color:white; }
         .btn-back { background: #95a5a6; color:white; margin-bottom: 10px; }
         .btn-edit { background: var(--warning); color: white; width: auto; padding: 10px 15px; font-size: 14px; margin: 0; border-radius: 10px; }
-        .btn-delete { background: var(--danger); color: white; margin-top: 20px; font-size: 14px; padding: 12px; }
         .btn-whatsapp { background: var(--whatsapp); color: white; width: auto; padding: 10px 15px; font-size: 14px; margin: 0 0 0 8px; border-radius: 10px; text-decoration: none; display: flex; align-items: center; justify-content: center; }
         input, select, textarea { width:100%; padding:14px; margin:10px 0; border-radius:10px; border:1px solid #ccc; box-sizing: border-box; font-size: 16px; font-family: inherit; }
         .card { background:white; padding:18px; border-radius:15px; margin:12px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; }
@@ -29,7 +27,6 @@
         .sticky-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
         .sticky-nav h3 { margin: 0; flex-grow: 1; font-size: 18px; }
         .sticky-nav button { width: auto; padding: 10px 15px; margin: 0; font-size: 14px; }
-        label { font-size: 14px; font-weight: bold; color: var(--primary); display: block; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -38,7 +35,7 @@
 
 <div class="container" id="home">
     <button class="btn-main" onclick="nav('registro')">👤 Registrar Nuevo Joven</button>
-    <button class="btn-main" onclick="mostrarAsistencia()">📅 Tomar Asistencia</button>
+    <button class="btn-main" onclick="mostrarAsistencia()">📅 Tomar Asistencia (Hoy o Pasada)</button>
     <button class="btn-main" onclick="mostrarLista()">📋 Directorio y Búsqueda</button>
     <button class="btn-main" style="background:var(--purple)" onclick="mostrarTemas()">📖 Temas Enseñados</button>
     <button class="btn-main" style="background:var(--warning)" onclick="mostrarStats()">📊 Análisis y Seguimiento</button>
@@ -53,30 +50,29 @@
     </div>
     <input type="text" id="nom" placeholder="Nombre Completo">
     <input type="number" id="ed" placeholder="Edad">
-    <input type="tel" id="tel" placeholder="WhatsApp (Ej: 310...)">
+    <input type="tel" id="tel" placeholder="WhatsApp">
     <input type="text" id="dir" placeholder="Barrio">
-    <textarea id="obs" placeholder="Observaciones / Peticiones de Oración"></textarea>
+    <textarea id="obs" placeholder="Observaciones / Peticiones"></textarea>
     <select id="niv">
         <option value="Nuevo">🌱 Nuevo</option>
         <option value="En crecimiento">🔥 En crecimiento</option>
         <option value="Líder">👑 Líder</option>
     </select>
-    <button class="btn-save" id="btn-guardar-real">Sincronizar Datos</button>
-    <button class="btn-delete" id="btn-eliminar-joven" style="display:none;">🗑️ Eliminar permanentemente</button>
+    <button class="btn-save" id="btn-guardar-real">Guardar Sincronizado</button>
 </div>
 
 <div class="container" id="asistencia" style="display:none;">
     <div class="sticky-nav"><h3>Control de Asistencia</h3><button class="btn-back" onclick="nav('home')">Volver</button></div>
-    <label>Fecha de la Reunión:</label>
+    <label style="font-size:14px; font-weight:bold;">Fecha de la Reunión:</label>
     <input type="date" id="fecha-asis">
-    <input type="text" id="tema" placeholder="¿Qué tema se enseñó hoy?">
+    <input type="text" id="tema" placeholder="¿Qué tema se enseñó?">
     <div id="listaAsis"></div>
     <button class="btn-save" id="btn-finalizar-asis">Finalizar y Guardar</button>
 </div>
 
 <div class="container" id="lista" style="display:none;">
     <div class="sticky-nav"><h3>Directorio</h3><button class="btn-back" onclick="nav('home')">Volver</button></div>
-    <input type="text" id="busqueda" placeholder="🔍 Buscar nombre, barrio o nivel..." onkeyup="filtrarLista()">
+    <input type="text" id="busqueda" placeholder="🔍 Buscar por nombre, barrio o nivel..." onkeyup="filtrarLista()">
     <div id="listaJovenes"></div>
     <button class="btn-main" style="background:#2c3e50; margin-top:20px" onclick="exportarCSV()">📥 Descargar Directorio (CSV)</button>
 </div>
@@ -88,18 +84,6 @@
 
 <div class="container" id="stats" style="display:none;">
     <div class="sticky-nav"><h3>Análisis y Alertas</h3><button class="btn-back" onclick="nav('home')">Volver</button></div>
-    
-    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-        <div class="card" style="flex: 1; text-align: center; margin: 0; padding: 10px;">
-            <small>Asistencia Promedio</small><br>
-            <strong id="avg-asis" style="font-size: 20px; color: var(--accent);">0</strong>
-        </div>
-        <div class="card" style="flex: 1; text-align: center; margin: 0; padding: 10px;">
-            <small>% de Fidelidad</small><br>
-            <strong id="pct-fidelidad" style="font-size: 20px; color: var(--success);">0%</strong>
-        </div>
-    </div>
-
     <div id="reporte-nuevos"></div>
     <div id="reporte-seguimiento"></div>
     <div class="card"><strong>Distribución por Nivel</strong><div class="chart-container"><canvas id="chartNiveles"></canvas></div></div>
@@ -108,7 +92,7 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, set, push, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC9y2_2zkB6YfWhoIkk4LYB2mWxojbFjLw",
@@ -128,7 +112,6 @@
     let fotoBase64 = "";
     let c1 = null, c2 = null;
 
-    // --- SINCRONIZACIÓN ---
     onValue(ref(db, 'jovenes'), (snapshot) => {
         const data = snapshot.val();
         JOVENES = data ? Object.values(data) : [];
@@ -140,7 +123,6 @@
         TEMAS = data ? Object.values(data) : [];
     });
 
-    // --- NAVEGACIÓN ---
     window.nav = (id) => {
         ["home","registro","asistencia","lista","temas","stats"].forEach(s => document.getElementById(s).style.display="none");
         document.getElementById(id).style.display="block";
@@ -159,11 +141,10 @@
         }
     };
 
-    // --- GUARDAR / EDITAR JOVEN ---
     document.getElementById('btn-guardar-real').onclick = async () => {
         let nom = document.getElementById("nom").value.trim();
         let idEdit = document.getElementById("edit-id").value;
-        if(!nom) return alert("El nombre es obligatorio");
+        if(!nom) return alert("Nombre obligatorio");
 
         let id = idEdit || "j_" + Date.now();
         let jEx = JOVENES.find(x => x.id === idEdit);
@@ -182,26 +163,17 @@
         };
 
         await set(ref(db, 'jovenes/' + id), datos);
-        alert("¡Datos guardados!");
+        alert("Sincronizado!");
         window.nav('home');
         limpiarForm();
     };
 
-    // --- ELIMINAR JOVEN ---
-    document.getElementById('btn-eliminar-joven').onclick = async () => {
-        let id = document.getElementById("edit-id").value;
-        if(confirm("¿Estás seguro? Esta acción borrará al joven definitivamente.")){
-            await remove(ref(db, 'jovenes/' + id));
-            alert("Registro eliminado.");
-            window.nav('home');
-            limpiarForm();
-        }
-    };
-
-    // --- ASISTENCIA ---
     window.mostrarAsistencia = () => {
-        document.getElementById("fecha-asis").value = new Date().toISOString().split('T')[0];
+        // Establecer fecha de hoy por defecto
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById("fecha-asis").value = hoy;
         document.getElementById("tema").value = "";
+
         let c = document.getElementById("listaAsis"); c.innerHTML = "";
         [...JOVENES].sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(j => {
             let d = document.createElement("div");
@@ -218,30 +190,46 @@
         let sel = Array.from(document.querySelectorAll('.asistencia-row.selected')).map(el => el.dataset.id);
         let temaStr = document.getElementById("tema").value.trim();
         let fechaManual = document.getElementById("fecha-asis").value;
-        if(!fechaManual) return alert("Elige la fecha");
 
+        if(!fechaManual) return alert("Selecciona una fecha");
+
+        // 1. Actualizar historial de jóvenes (Mantenemos compatibilidad con tu sistema de true/false)
         for(let j of JOVENES) {
             let h = Array.isArray(j.historialAsis) ? [...j.historialAsis] : [];
             h.push(sel.includes(j.id));
-            if(h.length > 15) h.shift();
+            if(h.length > 12) h.shift();
             await set(ref(db, `jovenes/${j.id}/historialAsis`), h);
         }
 
+        // 2. Guardar Tema (Si la fecha existe, se sobreescribe/edita automáticamente)
         if(temaStr) {
-            const idTema = fechaManual.replace(/-/g, "");
-            await set(ref(db, 'temas/' + idTema), { fecha: fechaManual, tema: temaStr, cantidad: sel.length });
+            const idTema = fechaManual.replace(/-/g, ""); // ID único por fecha (ej: 20260316)
+            await set(ref(db, 'temas/' + idTema), {
+                fecha: fechaManual,
+                tema: temaStr,
+                cantidad: sel.length
+            });
         }
-        alert("Asistencia Guardada");
+        alert("Asistencia Guardada para " + fechaManual);
         window.nav('home');
     };
 
-    // --- DIRECTORIO ---
-    window.mostrarLista = () => { window.filtrarLista(); window.nav('lista'); };
+    window.mostrarLista = () => {
+        window.filtrarLista();
+        window.nav('lista');
+    };
 
     window.filtrarLista = () => {
         let q = document.getElementById("busqueda").value.toLowerCase();
-        let c = document.getElementById("listaJovenes"); c.innerHTML = "";
-        let filtrados = JOVENES.filter(x => (x.nombre||"").toLowerCase().includes(q) || (x.direccion||"").toLowerCase().includes(q) || (x.nivel||"").toLowerCase().includes(q));
+        let c = document.getElementById("listaJovenes"); 
+        c.innerHTML = "";
+        
+        let filtrados = JOVENES.filter(x => {
+            let n = (x.nombre || "").toLowerCase();
+            let b = (x.direccion || "").toLowerCase();
+            let l = (x.nivel || "").toLowerCase();
+            return n.includes(q) || b.includes(q) || l.includes(q);
+        });
 
         filtrados.forEach(x => {
             let f = x.foto ? `<img src="${x.foto}" class="foto-mini">` : `<div class="foto-mini"></div>`;
@@ -249,7 +237,10 @@
                 <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center;">
                         ${f}
-                        <div><strong>${x.nombre}</strong><br><small>📍 ${x.direccion || 'N/A'} | 🏷️ ${x.nivel}</small></div>
+                        <div>
+                            <strong>${x.nombre}</strong><br>
+                            <small style="color:#666;">📍 ${x.direccion || 'Sin barrio'} | 🏷️ ${x.nivel}</small>
+                        </div>
                     </div>
                     <div style="display:flex;">
                         <button class="btn-edit" onclick="editar('${x.id}')">✏️</button>
@@ -269,112 +260,69 @@
         document.getElementById("dir").value = j.direccion || "";
         document.getElementById("obs").value = j.observaciones || "";
         document.getElementById("niv").value = j.nivel;
-        document.getElementById("btn-eliminar-joven").style.display = "block";
         fotoBase64 = j.foto || "";
-        document.getElementById('img-prev').src = fotoBase64;
-        document.getElementById('img-prev').style.display = fotoBase64 ? 'block' : 'none';
+        if(fotoBase64) { 
+            document.getElementById('img-prev').src = fotoBase64; 
+            document.getElementById('img-prev').style.display='block'; 
+        }
         window.nav('registro');
     };
 
-// --- ESTADÍSTICAS Y SEGUIMIENTO (VERSIÓN CORREGIDA) ---
+    window.mostrarTemas = () => {
+        let c = document.getElementById("listaTemas"); c.innerHTML = "";
+        // Ordenar temas por fecha más reciente
+        [...TEMAS].sort((a,b) => b.fecha.localeCompare(a.fecha)).forEach(t => {
+            c.innerHTML += `<div class="card"><strong>${t.tema}</strong><br><small>${t.fecha} — ${t.cantidad} asist.</small></div>`;
+        });
+        window.nav('temas');
+    };
+
+    window.mostrarStats = () => {
+        window.nav('stats');
+    }
+
     window.generarReportes = () => {
         const contUrg = document.getElementById("reporte-seguimiento");
         const contNew = document.getElementById("reporte-nuevos");
-        
-        // Limpiamos contenedores
-        contUrg.innerHTML = "<h4>🚨 Seguimiento Urgente (3 Faltas)</h4>";
-        contNew.innerHTML = "<h4>🌱 Nuevos (Integración)</h4>";
+        contUrg.innerHTML = "<h4>🚨 Seguimiento Urgente</h4>";
+        contNew.innerHTML = "<h4>🌱 Nuevos (Últ. 15 días)</h4>";
 
-        // 1. Cálculo de métricas (Promedio y Fidelidad)
-        if (TEMAS.length > 0) {
-            let suma = TEMAS.reduce((acc, t) => acc + (parseInt(t.cantidad) || 0), 0);
-            let promedio = (suma / TEMAS.length).toFixed(1);
-            let fidelidad = JOVENES.length > 0 ? ((promedio / JOVENES.length) * 100).toFixed(0) : 0;
-            document.getElementById("avg-asis").innerText = promedio;
-            document.getElementById("pct-fidelidad").innerText = fidelidad + "%";
-        }
-
-        // 2. Generación de Alertas y Botones de WhatsApp
         JOVENES.forEach(j => {
             let h = Array.isArray(j.historialAsis) ? j.historialAsis : [];
             let u3 = h.slice(-3);
-            
-            // --- ALERTA 3 FALTAS ---
             if(u3.length === 3 && u3.every(v => v === false)) {
-                let txtUrg = `¡Hola ${j.nombre}! 👋 Qué alegría saludarte. Te hemos extrañado mucho en las últimas reuniones de Jóvenes CFE. Solo quería saber cómo estás y si podemos orar por ti. ¡Un abrazo! 🤗`;
-                let linkUrg = `https://wa.me/57${j.telefono.trim()}?text=${encodeURIComponent(txtUrg)}`;
-                
-                contUrg.innerHTML += `
-                    <div class="card urgent-card">
-                        <strong>${j.nombre}</strong><br>
-                        <small style="color:#666;">No ha asistido a las últimas 3 reuniones.</small><br>
-                        <a href="${linkUrg}" target="_blank" style="text-decoration:none;">
-                            <button class="btn-whatsapp" style="margin-top:10px; width:100%; border-radius:10px;">💬 Enviar Mensaje</button>
-                        </a>
-                    </div>`;
+                contUrg.innerHTML += `<div class="card urgent-card"><strong>${j.nombre}</strong> (3 faltas)<br><a href="https://wa.me/57${j.telefono}" style="color:red">Llamar</a></div>`;
             }
-
-            // --- ALERTA NUEVOS ---
             let fReg = new Date(j.fechaRegistro);
-            let limite = new Date(); 
-            limite.setDate(limite.getDate() - 15);
-
+            let limite = new Date(); limite.setDate(limite.getDate() - 15);
             if(fReg > limite) {
-                let txtNew = `¡Hola ${j.nombre}! 👋 Bienvenido/a oficialmente a la familia de Jóvenes CFE. 💥 Me hace muy feliz que seas parte de nosotros. ¡Dios tiene cosas grandes para tu vida! 🙌`;
-                let linkNew = `https://wa.me/57${j.telefono.trim()}?text=${encodeURIComponent(txtNew)}`;
-                
-                contNew.innerHTML += `
-                    <div class="card new-card">
-                        <strong>${j.nombre}</strong><br>
-                        <small style="color:#666;">Registrado el: ${fReg.toLocaleDateString()}</small><br>
-                        <a href="${linkNew}" target="_blank" style="text-decoration:none;">
-                            <button class="btn-whatsapp" style="margin-top:10px; width:100%; background:var(--success); border-radius:10px;">✨ Dar Bienvenida</button>
-                        </a>
-                    </div>`;
+                contNew.innerHTML += `<div class="card new-card"><strong>${j.nombre}</strong> (${fReg.toLocaleDateString()})</div>`;
             }
         });
 
-        // 3. Actualización de Gráficos (Chart.js)
-        actualizarGraficos();
-    };
-
-    // Función auxiliar para no saturar generarReportes
-    function actualizarGraficos() {
-        if(c1) c1.destroy(); 
-        if(c2) c2.destroy();
-
+        if(c1) c1.destroy(); if(c2) c2.destroy();
         let n = { 'Nuevo': 0, 'En crecimiento': 0, 'Líder': 0 };
         JOVENES.forEach(x => { if(n[x.nivel] !== undefined) n[x.nivel]++; });
 
         c1 = new Chart(document.getElementById('chartNiveles'), {
             type: 'pie',
-            data: { labels: Object.keys(n), datasets: [{ data: Object.values(n), backgroundColor: ['#27ae60','#f39c12','#8e44ad'] }] },
-            options: { maintainAspectRatio: false }
+            data: { labels: Object.keys(n), datasets: [{ data: Object.values(n), backgroundColor: ['#27ae60','#f39c12','#8e44ad'] }] }
         });
 
         let uT = [...TEMAS].sort((a,b) => a.fecha.localeCompare(b.fecha)).slice(-5);
         c2 = new Chart(document.getElementById('chartAsistencia'), {
             type: 'line',
-            data: { labels: uT.map(t => t.fecha), datasets: [{ label: 'Asistentes', data: uT.map(t => t.cantidad), borderColor: '#3498db', tension: 0.3 }] },
-            options: { maintainAspectRatio: false }
+            data: { labels: uT.map(t => t.fecha), datasets: [{ label: 'Asistentes', data: uT.map(t => t.cantidad), borderColor: '#3498db' }] }
         });
-    }
-
-    window.mostrarTemas = () => {
-        let c = document.getElementById("listaTemas"); c.innerHTML = "";
-        [...TEMAS].sort((a,b) => b.fecha.localeCompare(a.fecha)).forEach(t => {
-            c.innerHTML += `<div class="card"><strong>${t.tema}</strong><br><small>📅 ${t.fecha} — 👥 ${t.cantidad} asist.</small></div>`;
-        });
-        window.nav('temas');
     };
 
     window.exportarCSV = () => {
-        let csv = "\ufeffNombre,WhatsApp,Nivel,Barrio,Edad,Observaciones\n";
-        JOVENES.forEach(x => csv += `"${x.nombre}","${x.telefono}","${x.nivel}","${x.direccion}","${x.edad}","${x.observaciones}"\n`);
+        let csv = "\ufeffNombre,WhatsApp,Nivel,Barrio\n";
+        JOVENES.forEach(x => csv += `"${x.nombre}","${x.telefono}","${x.nivel}","${x.direccion}"\n`);
         let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         let link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = "Directorio_Jovenes.csv";
+        link.download = "Reporte_Jovenes.csv";
         link.click();
     };
 
@@ -386,7 +334,6 @@
         document.getElementById("dir").value = "";
         document.getElementById("obs").value = "";
         document.getElementById("img-prev").style.display = "none";
-        document.getElementById("btn-eliminar-joven").style.display = "none";
         fotoBase64 = "";
     }
 </script>
