@@ -70,7 +70,7 @@
 
 <div class="container" id="lista" style="display:none;">
     <div class="sticky-nav"><h3>Directorio</h3><button class="btn-back" onclick="nav('home')">Volver</button></div>
-    <input type="text" id="busqueda" placeholder="🔍 Buscar por nombre..." onkeyup="filtrarLista()">
+    <input type="text" id="busqueda" placeholder="🔍 Buscar por nombre, barrio o nivel..." onkeyup="filtrarLista()">
     <div id="listaJovenes"></div>
     <button class="btn-main" style="background:#2c3e50; margin-top:20px" onclick="exportarCSV()">📥 Descargar Directorio (CSV)</button>
 </div>
@@ -210,15 +210,32 @@
 
     window.filtrarLista = () => {
         let q = document.getElementById("busqueda").value.toLowerCase();
-        let c = document.getElementById("listaJovenes"); c.innerHTML = "";
-        JOVENES.filter(x => x.nombre.toLowerCase().includes(q)).forEach(x => {
+        let c = document.getElementById("listaJovenes"); 
+        c.innerHTML = "";
+        
+        // Filtramos comparando contra los tres campos
+        let filtrados = JOVENES.filter(x => {
+            let n = (x.nombre || "").toLowerCase();
+            let b = (x.direccion || "").toLowerCase();
+            let l = (x.nivel || "").toLowerCase();
+            
+            return n.includes(q) || b.includes(q) || l.includes(q);
+        });
+
+        filtrados.forEach(x => {
             let f = x.foto ? `<img src="${x.foto}" class="foto-mini">` : `<div class="foto-mini"></div>`;
             c.innerHTML += `
                 <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="display:flex; align-items:center;">${f}<strong>${x.nombre}</strong></div>
+                    <div style="display:flex; align-items:center;">
+                        ${f}
+                        <div>
+                            <strong>${x.nombre}</strong><br>
+                            <small style="color:#666;">📍 ${x.direccion || 'Sin barrio'} | 🏷️ ${x.nivel}</small>
+                        </div>
+                    </div>
                     <div style="display:flex;">
                         <button class="btn-edit" onclick="editar('${x.id}')">✏️</button>
-                        <a href="https://wa.me/57${x.telefono}" class="btn-whatsapp">📱</a>
+                        <a href="https://wa.me/57${x.telefono}" class="btn-whatsapp" target="_blank">📱</a>
                     </div>
                 </div>`;
         });
