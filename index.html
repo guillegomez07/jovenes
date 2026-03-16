@@ -276,38 +276,73 @@
         window.nav('registro');
     };
 
-    // --- ESTADÍSTICAS Y SEGUIMIENTO ---
+// --- ESTADÍSTICAS Y SEGUIMIENTO (VERSIÓN CORREGIDA) ---
     window.generarReportes = () => {
         const contUrg = document.getElementById("reporte-seguimiento");
         const contNew = document.getElementById("reporte-nuevos");
+        
+        // Limpiamos contenedores
         contUrg.innerHTML = "<h4>🚨 Seguimiento Urgente (3 Faltas)</h4>";
         contNew.innerHTML = "<h4>🌱 Nuevos (Integración)</h4>";
 
+        // 1. Cálculo de métricas (Promedio y Fidelidad)
         if (TEMAS.length > 0) {
-            let suma = TEMAS.reduce((acc, t) => acc + (t.cantidad || 0), 0);
+            let suma = TEMAS.reduce((acc, t) => acc + (parseInt(t.cantidad) || 0), 0);
             let promedio = (suma / TEMAS.length).toFixed(1);
             let fidelidad = JOVENES.length > 0 ? ((promedio / JOVENES.length) * 100).toFixed(0) : 0;
             document.getElementById("avg-asis").innerText = promedio;
             document.getElementById("pct-fidelidad").innerText = fidelidad + "%";
         }
 
+        // 2. Generación de Alertas y Botones de WhatsApp
         JOVENES.forEach(j => {
             let h = Array.isArray(j.historialAsis) ? j.historialAsis : [];
             let u3 = h.slice(-3);
+            
+            // --- ALERTA 3 FALTAS ---
             if(u3.length === 3 && u3.every(v => v === false)) {
-                let txtUrg = `¡Hola ${j.nombre}! 👋 Qué alegría saludarte. Te hemos extrañado mucho en las últimas reuniones de Jóvenes CFE. Solo quería saber cómo estás y si podemos orar por ti. ¡Un abrazo!`;
-                contUrg.innerHTML += `<div class="card urgent-card"><strong>${j.nombre}</strong><br><a href="https://wa.me/57${j.telefono}?text=${encodeURIComponent(txtUrg)}" target="_blank" class="btn-whatsapp" style="margin-top:10px; width:100%;">💬 Escribirle</a></div>`;
+                let txtUrg = `¡Hola ${j.nombre}! 👋 Qué alegría saludarte. Te hemos extrañado mucho en las últimas reuniones de Jóvenes CFE. Solo quería saber cómo estás y si podemos orar por ti. ¡Un abrazo! 🤗`;
+                let linkUrg = `https://wa.me/57${j.telefono.trim()}?text=${encodeURIComponent(txtUrg)}`;
+                
+                contUrg.innerHTML += `
+                    <div class="card urgent-card">
+                        <strong>${j.nombre}</strong><br>
+                        <small style="color:#666;">No ha asistido a las últimas 3 reuniones.</small><br>
+                        <a href="${linkUrg}" target="_blank" style="text-decoration:none;">
+                            <button class="btn-whatsapp" style="margin-top:10px; width:100%; border-radius:10px;">💬 Enviar Mensaje</button>
+                        </a>
+                    </div>`;
             }
 
+            // --- ALERTA NUEVOS ---
             let fReg = new Date(j.fechaRegistro);
-            let limite = new Date(); limite.setDate(limite.getDate() - 15);
+            let limite = new Date(); 
+            limite.setDate(limite.getDate() - 15);
+
             if(fReg > limite) {
-                let txtNew = `¡Hola ${j.nombre}! 👋 Bienvenido/a oficialmente a la familia de Jóvenes CFE. 💥 Me hace muy feliz que seas parte de nosotros. ¡Dios tiene cosas grandes para tu vida!`;
-                contNew.innerHTML += `<div class="card new-card"><strong>${j.nombre}</strong><br><a href="https://wa.me/57${j.telefono}?text=${encodeURIComponent(txtNew)}" target="_blank" class="btn-whatsapp" style="margin-top:10px; width:100%; background:var(--success);">💬 Dar Bienvenida</a></div>`;
+                let txtNew = `¡Hola ${j.nombre}! 👋 Bienvenido/a oficialmente a la familia de Jóvenes CFE. 💥 Me hace muy feliz que seas parte de nosotros. ¡Dios tiene cosas grandes para tu vida! 🙌`;
+                let linkNew = `https://wa.me/57${j.telefono.trim()}?text=${encodeURIComponent(txtNew)}`;
+                
+                contNew.innerHTML += `
+                    <div class="card new-card">
+                        <strong>${j.nombre}</strong><br>
+                        <small style="color:#666;">Registrado el: ${fReg.toLocaleDateString()}</small><br>
+                        <a href="${linkNew}" target="_blank" style="text-decoration:none;">
+                            <button class="btn-whatsapp" style="margin-top:10px; width:100%; background:var(--success); border-radius:10px;">✨ Dar Bienvenida</button>
+                        </a>
+                    </div>`;
             }
         });
 
-        if(c1) c1.destroy(); if(c2) c2.destroy();
+        // 3. Actualización de Gráficos (Chart.js)
+        actualizarGraficos();
+    };
+
+    // Función auxiliar para no saturar generarReportes
+    function actualizarGraficos() {
+        if(c1) c1.destroy(); 
+        if(c2) c2.destroy();
+
         let n = { 'Nuevo': 0, 'En crecimiento': 0, 'Líder': 0 };
         JOVENES.forEach(x => { if(n[x.nivel] !== undefined) n[x.nivel]++; });
 
@@ -323,7 +358,7 @@
             data: { labels: uT.map(t => t.fecha), datasets: [{ label: 'Asistentes', data: uT.map(t => t.cantidad), borderColor: '#3498db', tension: 0.3 }] },
             options: { maintainAspectRatio: false }
         });
-    };
+    }
 
     window.mostrarTemas = () => {
         let c = document.getElementById("listaTemas"); c.innerHTML = "";
