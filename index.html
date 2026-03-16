@@ -184,6 +184,18 @@
         }
     };
 
+    window.eliminarTema = async (id) => {
+        if(confirm("¿Estás seguro de borrar este tema del historial?")) {
+            try {
+                await remove(ref(db, 'temas/' + id));
+                // Refrescamos la lista de temas inmediatamente
+                window.mostrarTemas();
+            } catch (e) {
+            alert("Error al eliminar: " + e.message);
+            }
+        }
+    };    
+    
     window.mostrarAsistencia = () => {
         document.getElementById('fecha-asis').value = new Date().toISOString().split('T')[0];
         const cont = document.getElementById('listaAsis'); cont.innerHTML = "";
@@ -290,11 +302,33 @@
     };
 
     window.mostrarTemas = () => {
-        const cont = document.getElementById('listaTemas'); cont.innerHTML = "";
-        [...TEMAS].sort((a,b)=>b.fecha.localeCompare(a.fecha)).forEach(t => {
-            cont.innerHTML += `<div class="card"><strong>${t.tema}</strong><br><small>📅 ${t.fecha} — 👥 ${t.cantidad} pers.</small></div>`;
+        const cont = document.getElementById('listaTemas'); 
+        cont.innerHTML = "";
+        [...TEMAS].sort((a,b) => b.fecha.localeCompare(a.fecha)).forEach(t => {
+            // Generamos el ID exacto que usa Firebase (ej: 2026-03-16 -> 20260316)
+            const idT = t.fecha.replace(/-/g,''); 
+        
+            cont.innerHTML += `
+                <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>${t.tema}</strong><br>
+                        <small>📅 ${t.fecha} — 👥 ${t.cantidad} pers.</small>
+                    </div>
+                    <button onclick="window.eliminarTema('${idT}')" 
+                            style="background:var(--danger); color:white; border:none; border-radius:10px; padding:8px 12px; width:auto; margin:0;">
+                        🗑️
+                    </button>
+                </div>`;
         });
         nav('temas');
+    };
+
+    window.eliminarTema = async (id) => {
+        if(confirm("¿Eliminar este tema del historial?")) {
+            await remove(ref(db, 'temas/' + id));
+            // No hace falta llamar a mostrarTemas() manualmente, 
+            // onValue actualizará la lista automáticamente.
+        }
     };
 
     window.exportarCSV = () => {
