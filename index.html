@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jóvenes CFE Cloud - Final Pro</title>
+    <title>Jóvenes CFE Cloud - Versión Recuperada</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --warning: #f39c12; --bg: #f4f6f9; --danger: #e74c3c; --purple: #8e44ad; --whatsapp: #25D366; }
         body { font-family: 'Segoe UI', sans-serif; margin:0; background: var(--bg); color: #333; -webkit-tap-highlight-color: transparent; }
         header { background: var(--primary); color:white; padding:20px; text-align:center; font-weight: bold; font-size: 22px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .container { padding:15px; max-width: 500px; margin: auto; }
-        button { width:100%; padding:16px; margin:10px 0; border:none; border-radius:15px; font-size:16px; font-weight:600; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s; -webkit-appearance: none; }
-        button:active { transform: scale(0.98); opacity: 0.8; }
-        button:disabled { background: #ccc !important; transform: none; box-shadow: none; }
+        button { width:100%; padding:16px; margin:10px 0; border:none; border-radius:15px; font-size:16px; font-weight:600; cursor:pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: 0.2s; }
+        button:active { transform: scale(0.98); }
+        button:disabled { background: #ccc !important; }
         .btn-main { background: var(--accent); color:white; }
         .btn-save { background: var(--success); color:white; }
         .btn-back { background: #95a5a6; color:white; margin-bottom: 10px; width: auto; padding: 10px 15px; font-size: 14px; }
@@ -23,7 +23,7 @@
         .card { background:white; padding:18px; border-radius:15px; margin:12px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; }
         .urgent-card { border-left: 5px solid var(--danger); background: #fff5f5; }
         .new-card { border-left: 5px solid var(--success); background: #f0fff4; }
-        .foto-mini { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 12px; background: #eee; }
+        .foto-mini { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 12px; background: #eee; border: 1px solid #ddd; }
         .asistencia-row { display: flex; align-items: center; justify-content: space-between; background: white; padding: 15px; border-radius: 12px; margin-bottom: 8px; border: 2px solid transparent; cursor: pointer; }
         .asistencia-row.selected { border-color: var(--success); background: #eaffef; }
         .chart-container { position: relative; height: 200px; width: 100%; margin-top: 10px; }
@@ -98,11 +98,10 @@
     <div id="reporte-nuevos"></div>
     <div id="reporte-seguimiento"></div>
     <div class="card"><strong>Tendencia</strong><div class="chart-container"><canvas id="chartTendencia"></canvas></div></div>
-    <div class="card"><strong>Distribución Niveles</strong><div class="chart-container"><canvas id="chartNiveles"></canvas></div></div>
 </div>
 
 <div class="container" id="temas" style="display:none;">
-    <div class="sticky-nav"><h3>Temas Enseñados</h3><button class="btn-back" onclick="nav('home')">Volver</button></div>
+    <div class="sticky-nav"><h3>Historial Temas</h3><button class="btn-back" onclick="nav('home')">Volver</button></div>
     <div id="listaTemas"></div>
 </div>
 
@@ -126,54 +125,44 @@
     let JOVENES = [];
     let TEMAS = [];
     let fotoBase64 = "";
-    let chart1 = null, chart2 = null;
+    let chartTendencia = null;
 
-    // Sincronización Realtime
     onValue(ref(db, 'jovenes'), (snap) => { JOVENES = snap.val() ? Object.values(snap.val()) : []; });
     onValue(ref(db, 'temas'), (snap) => { TEMAS = snap.val() ? Object.values(snap.val()) : []; });
 
-    // Navegación (Botonera)
     window.nav = (id) => {
-        ['home','registro','asistencia','lista','temas','stats','oracion'].forEach(sec => {
-            const el = document.getElementById(sec);
-            if(el) el.style.display = 'none';
+        ['home','registro','asistencia','lista','temas','stats','oracion'].forEach(v => {
+            const el = document.getElementById(v); if(el) el.style.display='none';
         });
-        document.getElementById(id).style.display = 'block';
-        window.scrollTo(0,0);
+        document.getElementById(id).style.display='block';
         if(id === 'stats') window.generarReportes();
     };
 
     window.volverHome = () => { window.limpiarForm(); window.nav('home'); };
 
-    // Lógica Registro
     window.previsualizarFoto = (input) => {
         if (input.files && input.files[0]) {
             let reader = new FileReader();
             reader.onload = (e) => {
                 fotoBase64 = e.target.result;
                 const img = document.getElementById('img-prev');
-                img.src = fotoBase64;
-                img.style.display = 'block';
+                img.src = fotoBase64; img.style.display = 'block';
             };
             reader.readAsDataURL(input.files[0]);
         }
     };
 
     window.guardarJoven = async () => {
-        const btn = document.getElementById('btn-guardar-joven');
         const nom = document.getElementById('nom').value.trim();
-        if(!nom) return alert("Por favor, ingresa el nombre.");
-
+        if(!nom) return alert("Nombre Requerido");
+        const btn = document.getElementById('btn-guardar-joven');
         btn.disabled = true;
-        btn.innerText = "Sincronizando...";
 
         const id = document.getElementById('edit-id').value || "j_" + Date.now();
         const jEx = JOVENES.find(x => x.id === id);
         
         const datos = {
-            id,
-            nombre: nom,
-            edad: document.getElementById('ed').value || "",
+            id, nombre: nom, edad: document.getElementById('ed').value || "",
             telefono: document.getElementById('tel').value.replace(/\D/g,'') || "",
             direccion: document.getElementById('dir').value || "",
             observaciones: document.getElementById('obs').value || "",
@@ -183,30 +172,22 @@
             historialAsis: jEx ? (jEx.historialAsis || []) : []
         };
 
-        try {
-            await set(ref(db, 'jovenes/' + id), datos);
-            alert("¡Datos guardados!");
-            window.volverHome();
-        } catch (e) { alert("Error al conectar: " + e.message); }
-        
-        btn.disabled = false;
-        btn.innerText = "Sincronizar Datos";
+        await set(ref(db, 'jovenes/' + id), datos);
+        btn.disabled = false; volverHome();
     };
 
     window.eliminarJoven = async () => {
         const id = document.getElementById('edit-id').value;
-        if(id && confirm("¿Eliminar este integrante? Esta acción no se puede deshacer.")) {
+        if(id && confirm("¿Eliminar integrante?")) {
             await remove(ref(db, 'jovenes/' + id));
-            window.volverHome();
+            volverHome();
         }
     };
 
-    // Lógica Asistencia
     window.mostrarAsistencia = () => {
         document.getElementById('fecha-asis').value = new Date().toISOString().split('T')[0];
-        const cont = document.getElementById('listaAsis');
-        cont.innerHTML = "";
-        [...JOVENES].sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(j => {
+        const cont = document.getElementById('listaAsis'); cont.innerHTML = "";
+        [...JOVENES].sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(j => {
             const div = document.createElement('div');
             div.className = "asistencia-row";
             div.innerHTML = `<span>${j.nombre}</span> <span>✔</span>`;
@@ -214,116 +195,68 @@
             div.dataset.id = j.id;
             cont.appendChild(div);
         });
-        window.nav('asistencia');
+        nav('asistencia');
     };
 
     window.finalizarAsistencia = async () => {
-        const btn = document.getElementById('btn-guardar-asis');
         const sel = Array.from(document.querySelectorAll('.asistencia-row.selected')).map(el => el.dataset.id);
         const fecha = document.getElementById('fecha-asis').value;
         const temaStr = document.getElementById('tema').value.trim();
+        if(!fecha) return alert("Fecha requerida");
+
+        const updates = {};
+        JOVENES.forEach(j => {
+            let h = Array.isArray(j.historialAsis) ? [...j.historialAsis] : [];
+            h.push(sel.includes(j.id));
+            if(h.length > 15) h.shift();
+            updates[`jovenes/${j.id}/historialAsis`] = h;
+        });
+        if(temaStr) updates[`temas/${fecha.replace(/-/g,'')}`] = { fecha, tema: temaStr, cantidad: sel.length };
         
-        if(!fecha) return alert("Selecciona la fecha.");
-        btn.disabled = true; btn.innerText = "Guardando...";
-
-        try {
-            const updates = {};
-            JOVENES.forEach(j => {
-                let h = Array.isArray(j.historialAsis) ? [...j.historialAsis] : [];
-                h.push(sel.includes(j.id));
-                if(h.length > 15) h.shift();
-                updates[`jovenes/${j.id}/historialAsis`] = h;
-            });
-            if(temaStr) {
-                const idT = fecha.replace(/-/g,'');
-                updates[`temas/${idT}`] = { fecha, tema: temaStr, cantidad: sel.length };
-            }
-            await update(ref(db), updates);
-            alert("¡Asistencia registrada!");
-            document.getElementById('tema').value = "";
-            window.nav('home');
-        } catch(e) { alert("Error: " + e.message); }
-        btn.disabled = false; btn.innerText = "Finalizar y Guardar";
+        await update(ref(db), updates);
+        alert("¡Asistencia exitosa!");
+        document.getElementById('tema').value = ""; nav('home');
     };
 
-    // Vistas Adicionales
-    window.mostrarOracion = () => {
-        const cont = document.getElementById('listaPeticiones');
-        cont.innerHTML = "";
-        JOVENES.filter(j => (j.observaciones || "").trim() !== "").forEach(j => {
-            cont.innerHTML += `<div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <strong>${j.nombre}</strong>
-                    <span class="badge" style="background:var(--accent)">${j.nivel}</span>
-                </div>
-                <p style="margin:10px 0; color:#555; line-height:1.4;">${j.observaciones}</p>
-                <button class="btn-edit" onclick="editar('${j.id}')" style="background:#eee; color:#333; width:100%">Ver ficha completa</button>
-            </div>`;
-        });
-        if(!cont.innerHTML) cont.innerHTML = "<p style='text-align:center; color:#999;'>No hay motivos registrados.</p>";
-        window.nav('oracion');
-    };
-
-    window.mostrarTemas = () => {
-        const cont = document.getElementById('listaTemas');
-        cont.innerHTML = "";
-        [...TEMAS].sort((a,b) => b.fecha.localeCompare(a.fecha)).forEach(t => {
-            cont.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                <div><strong>${t.tema}</strong><br><small>📅 ${t.fecha} — 👥 ${t.cantidad} pers.</small></div>
-                <button class="btn-edit" style="background:var(--danger); padding:10px;" onclick="eliminarTema('${t.fecha.replace(/-/g,'')}')">🗑️</button>
-            </div>`;
-        });
-        window.nav('temas');
-    };
-
-    window.eliminarTema = async (id) => {
-        if(confirm("¿Borrar este tema del historial?")) {
-            await remove(ref(db, 'temas/' + id));
-            window.mostrarTemas();
-        }
-    };
-
-    window.mostrarLista = () => { window.nav('lista'); window.filtrarLista(); };
+    window.mostrarLista = () => { nav('lista'); window.filtrarLista(); };
 
     window.filtrarLista = () => {
         const q = document.getElementById('busqueda').value.toLowerCase();
-        const cont = document.getElementById('listaJovenes');
-        cont.innerHTML = "";
-        JOVENES.filter(x => (x.nombre||"").toLowerCase().includes(q)).forEach(x => {
+        const cont = document.getElementById('listaJovenes'); cont.innerHTML = "";
+        JOVENES.filter(x => x.nombre.toLowerCase().includes(q)).sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(x => {
             const f = x.foto ? `<img src="${x.foto}" class="foto-mini">` : `<div class="foto-mini"></div>`;
             cont.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center;">${f}<div><strong>${x.nombre}</strong><br><small>${x.nivel}</small></div></div>
-                <button class="btn-edit" onclick="editar('${x.id}')">✏️</button>
+                <button class="btn-edit" onclick="window.editarJoven('${x.id}')">✏️</button>
             </div>`;
         });
     };
 
-    window.editar = (id) => {
+    window.editarJoven = (id) => {
         const j = JOVENES.find(x => x.id === id);
         if(!j) return;
         document.getElementById('edit-id').value = j.id;
-        document.getElementById('nom').value = j.nombre || "";
-        document.getElementById('tel').value = j.telefono || "";
-        document.getElementById('dir').value = j.direccion || "";
-        document.getElementById('ed').value = j.edad || "";
-        document.getElementById('obs').value = j.observaciones || "";
-        document.getElementById('niv').value = j.nivel || "Nuevo";
+        document.getElementById('nom').value = j.nombre;
+        document.getElementById('tel').value = j.telefono;
+        document.getElementById('dir').value = j.direccion;
+        document.getElementById('ed').value = j.edad;
+        document.getElementById('obs').value = j.observaciones;
+        document.getElementById('niv').value = j.nivel;
         fotoBase64 = j.foto || "";
-        const img = document.getElementById('img-prev');
-        img.src = fotoBase64;
-        img.style.display = fotoBase64 ? 'block' : 'none';
+        document.getElementById('img-prev').src = fotoBase64;
+        document.getElementById('img-prev').style.display = fotoBase64 ? 'block' : 'none';
         document.getElementById('btn-eliminar-joven').style.display = 'block';
-        window.nav('registro');
+        nav('registro');
     };
 
     window.generarReportes = () => {
         const cU = document.getElementById('reporte-seguimiento');
         const cN = document.getElementById('reporte-nuevos');
-        cU.innerHTML = "<h4>🚨 Seguimiento Extra</h4>";
-        cN.innerHTML = "<h4>🌱 Nuevos Integrantes</h4>";
+        cU.innerHTML = "<h4>🚨 Seguimiento Urgente</h4>";
+        cN.innerHTML = "<h4>🌱 Bienvenida Nuevos</h4>";
 
         if(TEMAS.length > 0) {
-            const sum = TEMAS.reduce((a,b) => a + (parseInt(b.cantidad)||0), 0);
+            const sum = TEMAS.reduce((a,b) => a + (b.cantidad||0), 0);
             const avg = (sum / TEMAS.length).toFixed(1);
             document.getElementById('avg-asis').innerText = avg;
             document.getElementById('pct-fidelidad').innerText = ((avg / (JOVENES.length||1))*100).toFixed(0) + "%";
@@ -332,22 +265,36 @@
         JOVENES.forEach(j => {
             const h = j.historialAsis || [];
             if(h.length >= 3 && h.slice(-3).every(v => v === false)) {
-                cU.innerHTML += `<div class="card urgent-card"><strong>${j.nombre}</strong><br><a class="btn-whatsapp" href="https://wa.me/57${j.telefono}?text=Hola%20${j.nombre}" target="_blank">💬 Escribir</a></div>`;
+                cU.innerHTML += `<div class="card urgent-card"><strong>${j.nombre}</strong><br><a class="btn-whatsapp" href="https://wa.me/57${j.telefono}?text=Hola%20${j.nombre}" target="_blank">💬 Saludarlos</a></div>`;
             }
             if(new Date() - new Date(j.fechaRegistro) < 15 * 24 * 60 * 60 * 1000) {
-                cN.innerHTML += `<div class="card new-card"><strong>${j.nombre}</strong><br><a class="btn-whatsapp" style="background:var(--success)" href="https://wa.me/57${j.telefono}?text=Bienvenido" target="_blank">✨ Bienvenida</a></div>`;
+                cN.innerHTML += `<div class="card new-card"><strong>${j.nombre}</strong><br><a class="btn-whatsapp" style="background:var(--success)" href="https://wa.me/57${j.telefono}?text=Bienvenido" target="_blank">✨ Dar Bienvenida</a></div>`;
             }
         });
 
-        // Gráficas
-        if(chart1) chart1.destroy();
-        const n = { 'Nuevo': 0, 'En crecimiento': 0, 'Líder': 0 };
-        JOVENES.forEach(x => n[x.nivel]++);
-        chart1 = new Chart(document.getElementById('chartNiveles'), { type: 'pie', data: { labels: Object.keys(n), datasets: [{ data: Object.values(n), backgroundColor: ['#27ae60','#f39c12','#8e44ad'] }] }, options: { maintainAspectRatio: false } });
+        if(chartTendencia) chartTendencia.destroy();
+        const ult = [...TEMAS].sort((a,b)=>a.fecha.localeCompare(b.fecha)).slice(-5);
+        chartTendencia = new Chart(document.getElementById('chartTendencia'), {
+            type: 'line',
+            data: { labels: ult.map(t => t.fecha.substring(5)), datasets: [{ label: 'Asistencia', data: ult.map(t => t.cantidad), borderColor: '#3498db', tension: 0.3, fill: true, backgroundColor: 'rgba(52, 152, 219, 0.1)' }] },
+            options: { maintainAspectRatio: false }
+        });
+    };
 
-        if(chart2) chart2.destroy();
-        const ut = [...TEMAS].sort((a,b) => a.fecha.localeCompare(b.fecha)).slice(-5);
-        chart2 = new Chart(document.getElementById('chartTendencia'), { type: 'line', data: { labels: ut.map(t => t.fecha.substring(5)), datasets: [{ label: 'Pers.', data: ut.map(t => t.cantidad), borderColor: '#3498db', tension: 0.3, fill: true, backgroundColor: 'rgba(52, 152, 219, 0.1)' }] }, options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } });
+    window.mostrarOracion = () => {
+        const cont = document.getElementById('listaPeticiones'); cont.innerHTML = "";
+        JOVENES.filter(j => (j.observaciones||"").trim() !== "").forEach(j => {
+            cont.innerHTML += `<div class="card"><strong>${j.nombre}</strong><p style="font-style:italic;">"${j.observaciones}"</p></div>`;
+        });
+        nav('oracion');
+    };
+
+    window.mostrarTemas = () => {
+        const cont = document.getElementById('listaTemas'); cont.innerHTML = "";
+        [...TEMAS].sort((a,b)=>b.fecha.localeCompare(a.fecha)).forEach(t => {
+            cont.innerHTML += `<div class="card"><strong>${t.tema}</strong><br><small>📅 ${t.fecha} — 👥 ${t.cantidad} pers.</small></div>`;
+        });
+        nav('temas');
     };
 
     window.exportarCSV = () => {
@@ -359,21 +306,18 @@
     };
 
     window.limpiarForm = () => {
-        ['edit-id','nom','tel','dir','ed','obs'].forEach(id => { 
-            const el = document.getElementById(id); 
-            if(el) el.value = ""; 
-        });
+        ['edit-id','nom','tel','dir','ed','obs'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; });
         document.getElementById('img-prev').style.display='none';
         document.getElementById('btn-eliminar-joven').style.display='none';
         fotoBase64 = "";
     };
 
-    // Exponer funciones necesarias al objeto window
+    // Exportar funciones críticas a window
+    window.editarJoven = editarJoven;
     window.guardarJoven = guardarJoven;
-    window.eliminarJoven = eliminarJoven;
     window.finalizarAsistencia = finalizarAsistencia;
-    window.editar = editar;
-    window.eliminarTema = eliminarTema;
+    window.eliminarJoven = eliminarJoven;
+    window.generarReportes = generarReportes;
 </script>
 </body>
 </html>
