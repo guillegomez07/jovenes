@@ -80,7 +80,7 @@
 
 <div class="container" id="lista" style="display:none;">
     <div class="sticky-nav"><h3>Directorio</h3><button class="btn-back" onclick="nav('home')">Volver</button></div>
-    <input type="text" id="busqueda" placeholder="Buscar por nombre..." onkeyup="filtrarLista()">
+    <input type="text" id="busqueda" placeholder="Buscar por nombre, barrio o nivel..." onkeyup="filtrarLista()">
     <div id="listaJovenes"></div>
     <button class="btn-main" style="background:#2c3e50" onclick="exportarCSV()">📥 Exportar CSV</button>
 </div>
@@ -98,6 +98,12 @@
     <div id="reporte-nuevos"></div>
     <div id="reporte-seguimiento"></div>
     <div class="card"><strong>Tendencia</strong><div class="chart-container"><canvas id="chartTendencia"></canvas></div></div>
+    <div class="card">
+        <strong>Distribución por Niveles</strong>
+        <div class="chart-container">
+            <canvas id="chartNiveles"></canvas>
+        </div>
+    </div>
 </div>
 
 <div class="container" id="temas" style="display:none;">
@@ -127,9 +133,11 @@
     let fotoBase64 = "";
     let chartTendencia = null;
 
+    // Escucha de datos en tiempo real
     onValue(ref(db, 'jovenes'), (snap) => { JOVENES = snap.val() ? Object.values(snap.val()) : []; });
     onValue(ref(db, 'temas'), (snap) => { TEMAS = snap.val() ? Object.values(snap.val()) : []; });
 
+    // Navegación
     window.nav = (id) => {
         ['home','registro','asistencia','lista','temas','stats','oracion'].forEach(v => {
             const el = document.getElementById(v); if(el) el.style.display='none';
@@ -140,6 +148,7 @@
 
     window.volverHome = () => { window.limpiarForm(); window.nav('home'); };
 
+    // Manejo de Fotos
     window.previsualizarFoto = (input) => {
         if (input.files && input.files[0]) {
             let reader = new FileReader();
@@ -152,6 +161,7 @@
         }
     };
 
+    // CRUD Jóvenes
     window.guardarJoven = async () => {
         const nom = document.getElementById('nom').value.trim();
         if(!nom) return alert("Nombre Requerido");
@@ -184,18 +194,7 @@
         }
     };
 
-    window.eliminarTema = async (id) => {
-        if(confirm("¿Estás seguro de borrar este tema del historial?")) {
-            try {
-                await remove(ref(db, 'temas/' + id));
-                // Refrescamos la lista de temas inmediatamente
-                window.mostrarTemas();
-            } catch (e) {
-            alert("Error al eliminar: " + e.message);
-            }
-        }
-    };    
-    
+    // Asistencia
     window.mostrarAsistencia = () => {
         document.getElementById('fecha-asis').value = new Date().toISOString().split('T')[0];
         const cont = document.getElementById('listaAsis'); cont.innerHTML = "";
@@ -230,19 +229,49 @@
         document.getElementById('tema').value = ""; nav('home');
     };
 
-    window.mostrarLista = () => { nav('lista'); window.filtrarLista(); };
-
+    // Búsqueda y Lista (Tu diseño detallado)
     window.filtrarLista = () => {
         const q = document.getElementById('busqueda').value.toLowerCase();
-        const cont = document.getElementById('listaJovenes'); cont.innerHTML = "";
-        JOVENES.filter(x => x.nombre.toLowerCase().includes(q)).sort((a,b)=>a.nombre.localeCompare(b.nombre)).forEach(x => {
-            const f = x.foto ? `<img src="${x.foto}" class="foto-mini">` : `<div class="foto-mini"></div>`;
-            cont.innerHTML += `<div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center;">${f}<div><strong>${x.nombre}</strong><br><small>${x.nivel}</small></div></div>
-                <button class="btn-edit" onclick="window.editarJoven('${x.id}')">✏️</button>
+        const cont = document.getElementById('listaJovenes');
+        cont.innerHTML = "";
+
+        const filtrados = JOVENES.filter(x => 
+            (x.nombre || "").toLowerCase().includes(q) || 
+            (x.direccion || "").toLowerCase().includes(q) ||
+            (x.nivel || "").toLowerCase().includes(q)
+        );
+
+        cont.innerHTML = `
+            <div style="margin: 10px 0; font-size: 14px; color: var(--primary); font-weight: bold; background: #eef2f7; padding: 10px; border-radius: 10px; border-left: 4px solid var(--accent);">
+                📊 Resultados: ${filtrados.length} ${filtrados.length === 1 ? 'persona' : 'personas'}
             </div>`;
+
+        filtrados.sort((a,b) => a.nombre.localeCompare(b.nombre)).forEach(x => {
+            const displayFoto = x.foto 
+                ? `<img src="${x.foto}" class="foto-mini">` 
+                : `<div class="foto-mini" style="background:#ddd; display:flex; align-items:center; justify-content:center; font-size:10px; color:#777; text-align:center;">Sin foto</div>`;
+
+            cont.innerHTML += `
+                <div class="card" style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center;">
+                            ${displayFoto}
+                            <div>
+                                <strong style="font-size:17px; color:var(--primary);">${x.nombre}</strong><br>
+                                <span class="badge" style="background:var(--accent);">${x.nivel}</span>
+                            </div>
+                        </div>
+                        <button class="btn-edit" onclick="window.editarJoven('${x.id}')" style="background:#f1f1f1; color:#333; border:1px solid #ddd; width:auto; padding:8px 12px;">✏️</button>
+                    </div>
+                    <div style="font-size:14px; color:#555; background:#f9f9f9; padding:8px; border-radius:8px;">
+                        📍 <b>Barrio:</b> ${x.direccion || "No registrado"}
+                    </div>
+                    <a class="btn-whatsapp" href="https://wa.me/57${x.telefono}?text=Hola%20${x.nombre}" target="_blank">💬 WhatsApp</a>
+                </div>`;
         });
     };
+
+    window.mostrarLista = () => { nav('lista'); window.filtrarLista(); };
 
     window.editarJoven = (id) => {
         const j = JOVENES.find(x => x.id === id);
@@ -261,38 +290,98 @@
         nav('registro');
     };
 
+    // Reportes y Análisis
+    let chartNiveles = null; // Variable para controlar la nueva gráfica y que no se duplique
+
     window.generarReportes = () => {
         const cU = document.getElementById('reporte-seguimiento');
         const cN = document.getElementById('reporte-nuevos');
-        cU.innerHTML = "<h4>🚨 Seguimiento Urgente</h4>";
-        cN.innerHTML = "<h4>🌱 Bienvenida Nuevos</h4>";
+        
+        cU.innerHTML = "<h4 style='color:var(--danger); margin-bottom:10px;'>🚨 Seguimiento (3+ Faltas)</h4>";
+        cN.innerHTML = "<h4 style='color:var(--success); margin-bottom:10px;'>🌱 Bienvenida (Nuevos)</h4>";
 
+        // OBJETO PARA CONTAR: Aquí guardamos cuántos hay de cada uno
+        const conteoNiveles = { "Nuevo": 0, "En crecimiento": 0, "Líder": 0 };
+
+        // 1. Cálculos de Promedio y Fidelidad (se mantienen)
         if(TEMAS.length > 0) {
             const sum = TEMAS.reduce((a,b) => a + (b.cantidad||0), 0);
             const avg = (sum / TEMAS.length).toFixed(1);
             document.getElementById('avg-asis').innerText = avg;
-            document.getElementById('pct-fidelidad').innerText = ((avg / (JOVENES.length||1))*100).toFixed(0) + "%";
+            const fidelidad = ((avg / (JOVENES.length || 1)) * 100).toFixed(0);
+            document.getElementById('pct-fidelidad').innerText = fidelidad + "%";
         }
 
+        // 2. Procesar cada joven para las listas y la gráfica
         JOVENES.forEach(j => {
-            const h = j.historialAsis || [];
-            if(h.length >= 3 && h.slice(-3).every(v => v === false)) {
-                cU.innerHTML += `<div class="card urgent-card"><strong>${j.nombre}</strong><br><a class="btn-whatsapp" href="https://wa.me/57${j.telefono}?text=Hola%20${j.nombre}" target="_blank">💬 Saludarlos</a></div>`;
+            // Sumamos al contador según el nivel que tenga el joven en la base de datos
+            if(conteoNiveles[j.nivel] !== undefined) {
+                conteoNiveles[j.nivel]++;
             }
-            if(new Date() - new Date(j.fechaRegistro) < 15 * 24 * 60 * 60 * 1000) {
-                cN.innerHTML += `<div class="card new-card"><strong>${j.nombre}</strong><br><a class="btn-whatsapp" style="background:var(--success)" href="https://wa.me/57${j.telefono}?text=Bienvenido" target="_blank">✨ Dar Bienvenida</a></div>`;
+
+            const h = j.historialAsis || [];
+            const fechaReg = j.fechaRegistro ? new Date(j.fechaRegistro) : new Date(0);
+            const diasDif = (new Date() - fechaReg) / (1000 * 60 * 60 * 24);
+            
+            // Lógica de Bienvenida corregida (Solo nivel "Nuevo" y registrado hace poco)
+            if (j.nivel === "Nuevo" && diasDif <= 15) {
+                cN.innerHTML += `
+                    <div class="card new-card" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div><strong>${j.nombre}</strong><br><small>Bienvenida (Nuevo)</small></div>
+                        <a href="https://wa.me/57${j.telefono}?text=Hola%20${j.nombre},%20¡bienvenido!" target="_blank" style="text-decoration:none;">📩</a>
+                    </div>`;
+            } 
+            // Lógica de Seguimiento (Solo si NO es un nuevo reciente y tiene 3 faltas)
+            else if (h.length >= 3 && h.slice(-3).every(v => v === false)) {
+                cU.innerHTML += `
+                    <div class="card urgent-card" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div><strong>${j.nombre}</strong><br><small>3+ faltas seguidas</small></div>
+                        <a href="https://wa.me/57${j.telefono}?text=Hola%20${j.nombre},%20te%20extrañamos" target="_blank" style="text-decoration:none;">💬</a>
+                    </div>`;
             }
         });
 
+        // 3. Gráfica de Tendencia (Línea)
         if(chartTendencia) chartTendencia.destroy();
-        const ult = [...TEMAS].sort((a,b)=>a.fecha.localeCompare(b.fecha)).slice(-5);
+        const ultimos = [...TEMAS].sort((a,b) => a.fecha.localeCompare(b.fecha)).slice(-7);
         chartTendencia = new Chart(document.getElementById('chartTendencia'), {
             type: 'line',
-            data: { labels: ult.map(t => t.fecha.substring(5)), datasets: [{ label: 'Asistencia', data: ult.map(t => t.cantidad), borderColor: '#3498db', tension: 0.3, fill: true, backgroundColor: 'rgba(52, 152, 219, 0.1)' }] },
+            data: {
+                labels: ultimos.map(t => t.fecha.split('-').slice(1).join('/')),
+                datasets: [{
+                    label: 'Asistencia',
+                    data: ultimos.map(t => t.cantidad),
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
             options: { maintainAspectRatio: false }
+        });
+
+        // 4. NUEVA GRÁFICA: Proporciones (Dona)
+        if(chartNiveles) chartNiveles.destroy(); // Limpiar gráfica anterior para que no parpadee
+        chartNiveles = new Chart(document.getElementById('chartNiveles'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Nuevos', 'En Crecimiento', 'Líderes'],
+                datasets: [{
+                    data: [conteoNiveles["Nuevo"], conteoNiveles["En crecimiento"], conteoNiveles["Líder"]],
+                    backgroundColor: ['#27ae60', '#3498db', '#8e44ad'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
         });
     };
 
+    // Peticiones de Oración
     window.mostrarOracion = () => {
         const cont = document.getElementById('listaPeticiones'); cont.innerHTML = "";
         JOVENES.filter(j => (j.observaciones||"").trim() !== "").forEach(j => {
@@ -301,33 +390,24 @@
         nav('oracion');
     };
 
+    // Historial de Temas
     window.mostrarTemas = () => {
-        const cont = document.getElementById('listaTemas'); 
-        cont.innerHTML = "";
+        const cont = document.getElementById('listaTemas'); cont.innerHTML = "";
         [...TEMAS].sort((a,b) => b.fecha.localeCompare(a.fecha)).forEach(t => {
-            // Generamos el ID exacto que usa Firebase (ej: 2026-03-16 -> 20260316)
             const idT = t.fecha.replace(/-/g,''); 
-        
             cont.innerHTML += `
                 <div class="card" style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <strong>${t.tema}</strong><br>
-                        <small>📅 ${t.fecha} — 👥 ${t.cantidad} pers.</small>
-                    </div>
-                    <button onclick="window.eliminarTema('${idT}')" 
-                            style="background:var(--danger); color:white; border:none; border-radius:10px; padding:8px 12px; width:auto; margin:0;">
-                        🗑️
-                    </button>
+                    <div><strong>${t.tema}</strong><br><small>📅 ${t.fecha} — 👥 ${t.cantidad} pers.</small></div>
+                    <button onclick="window.eliminarTema('${idT}')" style="background:var(--danger); color:white; border:none; border-radius:10px; padding:8px 12px; width:auto; margin:0;">🗑️</button>
                 </div>`;
         });
         nav('temas');
     };
 
     window.eliminarTema = async (id) => {
-        if(confirm("¿Eliminar este tema del historial?")) {
+        if(confirm("¿Eliminar este tema?")) {
             await remove(ref(db, 'temas/' + id));
-            // No hace falta llamar a mostrarTemas() manualmente, 
-            // onValue actualizará la lista automáticamente.
+            window.mostrarTemas();
         }
     };
 
@@ -346,12 +426,12 @@
         fotoBase64 = "";
     };
 
-    // Exportar funciones críticas a window
+    // Exportación de funciones al entorno global
     window.editarJoven = editarJoven;
     window.guardarJoven = guardarJoven;
     window.finalizarAsistencia = finalizarAsistencia;
     window.eliminarJoven = eliminarJoven;
-    window.generarReportes = generarReportes;
+    window.eliminarTema = eliminarTema;
 </script>
 </body>
 </html>
